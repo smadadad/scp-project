@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dublin Bus Real-Time Delay Analytics</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --blue: #58a6ff;
+    --orange: #E8462A;
+    --accent: #1C6EA4;
+    --font-mono: "JetBrains Mono", "Fira Code", monospace;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--orange);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo h1 { font-size: 16px; font-weight: 600; color: var(--text); }
+  .logo span { font-size: 12px; color: var(--muted); }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  .status-text { font-size: 12px; color: var(--muted); }
+  .last-updated { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+
+  main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; font-family: var(--font-mono); line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .kpi.red .kpi-value { color: var(--red); }
+  .kpi.yellow .kpi-value { color: var(--yellow); }
+  .kpi.green .kpi-value { color: var(--green); }
+  .kpi.blue .kpi-value { color: var(--blue); }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-title { font-size: 13px; font-weight: 600; }
+  .card-badge {
+    font-size: 10px; font-family: var(--font-mono);
+    background: rgba(88,166,255,.15);
+    color: var(--blue); border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  .card-badge.live {
+    background: rgba(63,185,80,.15);
+    color: var(--green);
+  }
+
+  .card-body { padding: 16px 18px; }
+
+  /* Route Table */
+  .route-table { width: 100%; border-collapse: collapse; }
+  .route-table th {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--muted); padding: 6px 10px; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .route-table td { padding: 10px 10px; font-size: 13px; border-bottom: 1px solid rgba(48,54,61,.6); }
+  .route-table tr:last-child td { border-bottom: none; }
+  .route-table tr:hover td { background: rgba(255,255,255,.03); }
+
+  .rank { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+
+  .route-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent);
+    color: #fff; font-weight: 700; font-size: 12px;
+    border-radius: 6px; padding: 2px 8px; min-width: 40px;
+  }
+
+  .delay-bar-wrap {
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .delay-bar {
+    height: 6px; border-radius: 3px; background: var(--red);
+    transition: width .5s ease;
+    min-width: 4px;
+  }
+
+  .delay-val { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+  .delay-val.ok { color: var(--green); }
+  .delay-val.warn { color: var(--yellow); }
+  .delay-val.crit { color: var(--red); }
+
+  .verdict {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; border-radius: 4px; padding: 2px 6px; font-weight: 600;
+  }
+  .verdict.worse { background: rgba(248,81,73,.15); color: var(--red); }
+  .verdict.normal { background: rgba(63,185,80,.12); color: var(--green); }
+  .verdict.better { background: rgba(210,153,34,.12); color: var(--yellow); }
+  .verdict.unknown { background: rgba(139,148,158,.12); color: var(--muted); }
+
+  /* Anomaly list */
+  .anomaly-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(48,54,61,.6);
+  }
+  .anomaly-item:last-child { border-bottom: none; }
+  .anomaly-route { font-weight: 600; font-size: 13px; }
+  .anomaly-ratio { font-family: var(--font-mono); font-size: 12px; color: var(--red); }
+  .anomaly-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+    padding: 8px 0;
+  }
+  .arch-layer { margin-bottom: 8px; }
+  .arch-name { color: var(--blue); font-weight: 600; margin-bottom: 4px; font-size: 10px; text-transform: uppercase; }
+  .arch-items { display: flex; gap: 8px; flex-wrap: wrap; }
+  .arch-box {
+    background: rgba(88,166,255,.1);
+    border: 1px solid rgba(88,166,255,.3);
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--blue);
+  }
+  .arch-arrow { color: var(--muted); align-self: center; }
+
+  /* Benchmark */
+  .bench-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(48,54,61,.6);
+    font-size: 13px;
+  }
+  .bench-row:last-child { border-bottom: none; }
+  .bench-label { color: var(--muted); font-size: 11px; width: 120px; flex-shrink: 0; }
+  .bench-bar-wrap { flex: 1; height: 8px; background: rgba(255,255,255,.07); border-radius: 4px; overflow: hidden; }
+  .bench-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--blue)); border-radius: 4px; transition: width .8s ease; }
+  .bench-val { font-family: var(--font-mono); font-size: 11px; color: var(--green); width: 60px; text-align: right; }
+
+  .empty { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
+  .loading { color: var(--muted); font-size: 12px; animation: blink 1.5s step-end infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .layer-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); padding: 3px 8px;
+    background: rgba(255,255,255,.04);
+    border-radius: 4px;
+  }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚌</div>
+    <div>
+      <h1>Dublin Bus Delay Analytics</h1>
+      <span>Lambda Architecture · Real-Time Pipeline</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-text" id="statusText">Connecting…</span>
+    </div>
+    <div class="last-updated" id="lastUpdated">–</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi red">
+      <div class="kpi-label">Most Delayed Route</div>
+      <div class="kpi-value" id="kpiTopRoute">–</div>
+      <div class="kpi-sub" id="kpiTopDelay">loading…</div>
+    </div>
+    <div class="kpi yellow">
+      <div class="kpi-label">Routes Tracked (Live)</div>
+      <div class="kpi-value" id="kpiRoutesTracked">–</div>
+      <div class="kpi-sub">in 5-min window</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Active Anomalies</div>
+      <div class="kpi-value" id="kpiAnomalies">–</div>
+      <div class="kpi-sub">&gt;2× historical avg</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Batch Speedup</div>
+      <div class="kpi-value" id="kpiBatchSpeedup">–</div>
+      <div class="kpi-sub">parallel vs sequential</div>
+    </div>
+  </div>
+
+  <!-- Top Routes + Anomalies -->
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Top Delayed Routes — 5-Minute Window</span>
+        <span class="card-badge live">SPEED LAYER</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="route-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Route</th>
+              <th>Avg Delay</th>
+              <th>Max</th>
+              <th>vs History</th>
+            </tr>
+          </thead>
+          <tbody id="topRoutesBody">
+            <tr><td colspan="5" class="empty loading">Fetching live data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Anomaly Alerts</span>
+        <span class="card-badge" style="background:rgba(248,81,73,.15);color:var(--red)">MERGED VIEW</span>
+      </div>
+      <div class="card-body" id="anomalyList">
+        <div class="empty loading">Scanning for anomalies…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture + Benchmark -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Lambda Architecture — Live Layers</span>
+        <span class="card-badge">SYSTEM</span>
+      </div>
+      <div class="card-body">
+        <div class="arch-layer">
+          <div class="arch-name">▼ Ingestion</div>
+          <div class="arch-items">
+            <div class="arch-box">TFI GTFS-RT API</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">Python Producer</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">Kinesis Data Streams</div>
+          </div>
+        </div>
+        <div style="margin:10px 0;border-left:2px solid var(--border);height:20px;margin-left:10px"></div>
+        <div class="arch-layer">
+          <div class="arch-name">⚡ Speed Layer (this view)</div>
+          <div class="arch-items">
+            <div class="arch-box">Lambda / EC2</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">Sliding Window (5min)</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">DynamoDB Speed</div>
+          </div>
+        </div>
+        <div style="margin:10px 0;border-left:2px solid var(--border);height:20px;margin-left:10px"></div>
+        <div class="arch-layer">
+          <div class="arch-name">🗄 Batch Layer</div>
+          <div class="arch-items">
+            <div class="arch-box">S3 Raw Store</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">EMR + PySpark</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">S3 Parquet + Athena</div>
+          </div>
+        </div>
+        <div style="margin:10px 0;border-left:2px solid var(--border);height:20px;margin-left:10px"></div>
+        <div class="arch-layer">
+          <div class="arch-name">🔀 Serving Layer (merge)</div>
+          <div class="arch-items">
+            <div class="arch-box">DynamoDB Speed</div>
+            <div class="arch-arrow">+</div>
+            <div class="arch-box">DynamoDB Batch</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box">Flask API → Dashboard</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Performance Benchmark</span>
+        <span class="card-badge">BATCH LAYER</span>
+      </div>
+      <div class="card-body" id="benchmarkPanel">
+        <div class="bench-row">
+          <span class="bench-label">1 partition</span>
+          <div class="bench-bar-wrap"><div class="bench-bar" style="width:12%"></div></div>
+          <span class="bench-val">1.0×</span>
+        </div>
+        <div class="bench-row">
+          <span class="bench-label">2 partitions</span>
+          <div class="bench-bar-wrap"><div class="bench-bar" style="width:23%"></div></div>
+          <span class="bench-val">1.85×</span>
+        </div>
+        <div class="bench-row">
+          <span class="bench-label">4 partitions</span>
+          <div class="bench-bar-wrap"><div class="bench-bar" style="width:42%"></div></div>
+          <span class="bench-val">3.4×</span>
+        </div>
+        <div class="bench-row">
+          <span class="bench-label">8 partitions</span>
+          <div class="bench-bar-wrap"><div class="bench-bar" style="width:76%"></div></div>
+          <span class="bench-val">6.1×</span>
+        </div>
+        <p style="margin-top:12px;font-size:11px;color:var(--muted)">
+          Speedup ratio vs single-partition baseline.<br>
+          Update with real EMR results after running benchmark.py.
+        </p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API_BASE = "http://localhost:5000"; 
+const REFRESH_MS = 30000;
+
+function fmtDelay(secs) {
+  if (secs === null || secs === undefined) return "–";
+  const s = Math.round(secs);
+  if (s < 0) return `${Math.abs(s)}s early`;
+  if (s < 60) return `${s}s late`;
+  const m = Math.floor(s / 60), rem = s % 60;
+  return rem > 0 ? `${m}m ${rem}s late` : `${m}m late`;
+}
+
+function delayClass(secs) {
+  if (!secs || secs < 60) return "ok";
+  if (secs < 300) return "warn";
+  return "crit";
+}
+
+function verdictHtml(delta) {
+  if (delta === null || delta === undefined) return '<span class="verdict unknown">No history</span>';
+  if (delta > 120) return '<span class="verdict worse">↑ Much worse</span>';
+  if (delta > 60) return '<span class="verdict worse">↑ Worse</span>';
+  if (delta < -60) return '<span class="verdict better">↓ Better</span>';
+  return '<span class="verdict normal">✓ Normal</span>';
+}
+
+async function fetchTopRoutes() {
+  const resp = await fetch(`${API_BASE}/routes/top-delayed`);
+  if (!resp.ok) throw new Error(`API ${resp.status}`);
+  return resp.json();
+}
+
+async function fetchAnomalies() {
+  const resp = await fetch(`${API_BASE}/anomalies`);
+  if (!resp.ok) throw new Error(`API ${resp.status}`);
+  return resp.json();
+}
+
+async function fetchSummary() {
+  const resp = await fetch(`${API_BASE}/summary`);
+  if (!resp.ok) throw new Error(`API ${resp.status}`);
+  return resp.json();
+}
+
+function renderTopRoutes(data) {
+  const routes = data.top_delayed_routes || [];
+  const tbody = document.getElementById("topRoutesBody");
+
+  if (!routes.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No data in current window</td></tr>';
+    return;
+  }
+
+  const maxDelay = Math.max(...routes.map(r => r.avg_delay_seconds || 0));
+
+  tbody.innerHTML = routes.map((r, i) => {
+    const barW = maxDelay > 0 ? Math.round((r.avg_delay_seconds / maxDelay) * 120) : 4;
+    const dc = delayClass(r.avg_delay_seconds);
+    return `
+      <tr>
+        <td class="rank">${i + 1}</td>
+        <td><span class="route-badge">${r.route_id || "?"}</span></td>
+        <td>
+          <div class="delay-bar-wrap">
+            <div class="delay-bar" style="width:${barW}px"></div>
+            <span class="delay-val ${dc}">${fmtDelay(r.avg_delay_seconds)}</span>
+          </div>
+        </td>
+        <td class="delay-val ${delayClass(r.max_delay_seconds)}">${fmtDelay(r.max_delay_seconds)}</td>
+        <td>${verdictHtml(r.delta_vs_historical)}</td>
+      </tr>`;
+  }).join("");
+
+  // Update KPIs
+  if (routes[0]) {
+    document.getElementById("kpiTopRoute").textContent = routes[0].route_id || "–";
+    document.getElementById("kpiTopDelay").textContent = fmtDelay(routes[0].avg_delay_seconds);
+  }
+  document.getElementById("kpiRoutesTracked").textContent = routes.length;
+}
+
+function renderAnomalies(data) {
+  const anomalies = data.anomalies || [];
+  const el = document.getElementById("anomalyList");
+  document.getElementById("kpiAnomalies").textContent = anomalies.length;
+
+  if (!anomalies.length) {
+    el.innerHTML = '<div class="empty" style="color:var(--green)">✓ No anomalies detected</div>';
+    return;
+  }
+
+  el.innerHTML = anomalies.slice(0, 6).map(a => `
+    <div class="anomaly-item">
+      <div>
+        <div class="anomaly-route">Route ${a.route_id}</div>
+        <div class="anomaly-detail">${fmtDelay(a.avg_delay_seconds)} avg · ${a.event_count || 0} events</div>
+      </div>
+      <div class="anomaly-ratio">${a.anomaly_ratio ? (parseFloat(a.anomaly_ratio).toFixed(1) + '× hist.') : '–'}</div>
+    </div>`
+  ).join("");
+}
+
+function setStatus(ok) {
+  const dot = document.getElementById("statusDot");
+  const text = document.getElementById("statusText");
+  dot.style.background = ok ? "var(--green)" : "var(--red)";
+  dot.style.boxShadow = ok ? "0 0 6px var(--green)" : "0 0 6px var(--red)";
+  text.textContent = ok ? "Live" : "Disconnected";
+}
+
+async function refresh() {
+  try {
+    const [topData, anomalyData] = await Promise.all([
+      fetchTopRoutes(),
+      fetchAnomalies()
+    ]);
+    renderTopRoutes(topData);
+    renderAnomalies(anomalyData);
+    setStatus(true);
+    document.getElementById("lastUpdated").textContent =
+      "Updated " + new Date().toLocaleTimeString("en-IE");
+  } catch (e) {
+    console.error("Refresh failed:", e);
+    setStatus(false);
+  }
+}
+
+// Initial load + polling
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Dublin Bus Real-Time Analytics Platform
+# Python dependencies
+
+# AWS SDK
+boto3>=1.34.0
+botocore>=1.34.0
+
+# TFI GTFS-Realtime
+gtfs-realtime-bindings>=1.0.0
+protobuf>=4.25.0
+
+# HTTP
+requests>=2.31.0
+
+# Serving API
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Batch Layer (PySpark — installed on EMR, needed locally for testing)
+pyspark>=3.5.0
+
+# Benchmarking / visualisation
+matplotlib>=3.8.0
+pandas>=2.1.0
+numpy>=1.26.0
+
+# Utilities
+python-dotenv>=1.0.0
