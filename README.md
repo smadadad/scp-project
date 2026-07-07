@@ -120,7 +120,7 @@ AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 AWS_SESSION_TOKEN=your_aws_session_token
 AWS_REGION=us-east-1
 KINESIS_STREAM_NAME=dublin-bus-stream
-S3_BUCKET_NAME=dublin-bus-analytics-bucket-x24101001
+S3_BUCKET_NAME=dublin-bus-analytics-bucket-xxxxx
 ```
 
 The application reads these values automatically from `config/config.py`.
@@ -227,15 +227,3 @@ python serving_layer/benchmark.py --api-url http://localhost:5000
 | Kinesis throughput | > 200 records/sec |
 
 ---
-
-## GitHub Repository
-
-Upload this entire folder to GitHub and include the URL in your IEEE report.
-
-```bash
-git init
-git add .
-git commit -m "Dublin Bus Analytics — NCI MSc Cloud Computing CA"
-git remote add origin https://github.com/YOUR_USERNAME/dublin-bus-analytics.git
-git push -u origin main
-```
