@@ -49,7 +49,6 @@ dynamo = boto3.resource("dynamodb")
 speed_table = dynamo.Table(DYNAMO_SPEED_TABLE)
 batch_table = dynamo.Table(DYNAMO_BATCH_TABLE)
 
-
 def get_batch_baseline(route_id: str) -> float | None:
     now = datetime.datetime.utcnow()
     time_bucket = f"{now.strftime('%A')}_{now.hour:02d}"

@@ -59,8 +59,6 @@ def add_cors_headers(response):
     return response
 
 
-# ─── Helpers ───────────────────────────────────────────────────────────────────
-
 def decimal_to_float(obj):
     """Recursively convert Decimal to float for JSON serialisation."""
     if isinstance(obj, Decimal):
@@ -158,8 +156,6 @@ def merge_views(route_id: str, speed: dict | None, batch: dict | None) -> dict:
     return merged
 
 
-# ─── Endpoints ─────────────────────────────────────────────────────────────────
-
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "timestamp": datetime.datetime.utcnow().isoformat()})
@@ -249,8 +245,6 @@ def summary():
         "system_status": "operational"
     })
 
-
-# ─── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     logger.info("🚀 Serving API starting on http://0.0.0.0:5000")

@@ -57,7 +57,9 @@ TFI GTFS-Realtime API (polled every 30s)
 ```
 dublin-bus-analytics/
 ├── config/
-│   └── config.py              # All configuration & API keys (update these!)
+│   └── config.py              # Loads runtime settings from environment/.env
+├── .env.example               # Template for required local environment variables
+├── .gitignore                 # Keeps .env and local secrets out of Git
 ├── ingestion/
 │   ├── producer.py            # Polls TFI API → Kinesis
 │   └── s3_consumer.py         # Kinesis → S3 raw store
@@ -95,10 +97,38 @@ Register for a free TFI API key:
 
 ### 2. Configure
 
-Edit `config/config.py` and replace:
+Create a local `.env` file in the project root. The file is ignored by Git, so it will not be committed.
+
+The easiest way is to copy the provided template:
+
+```bash
+cp .env.example .env
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Then fill in the required values in `.env`:
+
+```env
+TFI_API_KEY=your_tfi_api_key
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_SESSION_TOKEN=your_aws_session_token
+AWS_REGION=us-east-1
+KINESIS_STREAM_NAME=dublin-bus-stream
+S3_BUCKET_NAME=dublin-bus-analytics-bucket-x24101001
+```
+
+The application reads these values automatically from `config/config.py`.
+
+Required values for the pipeline to run:
 - `TFI_API_KEY` — your TFI API key
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` — from AWS Academy Learner Lab
-- `S3_BUCKET_NAME` — must be globally unique (add a random suffix)
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` — from your AWS account or AWS Academy Learner Lab
+- `S3_BUCKET_NAME` — must be globally unique (use a custom suffix if needed)
 
 ### 3. Provision AWS Infrastructure
 

@@ -37,8 +37,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# ─── Schema ────────────────────────────────────────────────────────────────────
-
 RAW_SCHEMA = StructType([
     StructField("event_id", StringType(), True),
     StructField("ingestion_time", StringType(), True),
@@ -67,7 +65,6 @@ def run_batch_job(input_path: str, output_path: str, num_partitions: int = 8):
     logger.info(f"Spark version: {spark.version}")
     logger.info(f"Reading raw data from: {input_path}")
 
-    # ── 1. Load raw JSON-lines from S3 ─────────────────────────────────────────
     df_raw = spark.read \
         .schema(RAW_SCHEMA) \
         .json(input_path) \
@@ -95,7 +92,6 @@ def run_batch_job(input_path: str, output_path: str, num_partitions: int = 8):
     total_records = df.count()
     logger.info(f"Total records loaded: {total_records:,}")
 
-    # ── 2. Route-Level Aggregate (MapReduce: group by route_id + time_bucket) ──
     df_route_agg = df.groupBy("route_id", "time_bucket", "day_of_week", "hour_of_day") \
         .agg(
             F.avg("delay_seconds").alias("avg_delay_seconds"),
@@ -121,7 +117,6 @@ def run_batch_job(input_path: str, output_path: str, num_partitions: int = 8):
         .parquet(f"{output_path}/route_time_aggregate/")
     logger.info("✅ Written: route_time_aggregate")
 
-    # ── 3. Top 20 Chronically Delayed Routes (overall) ─────────────────────────
     df_top_delayed = df.groupBy("route_id") \
         .agg(
             F.avg("delay_seconds").alias("overall_avg_delay"),
@@ -137,7 +132,6 @@ def run_batch_job(input_path: str, output_path: str, num_partitions: int = 8):
         .parquet(f"{output_path}/top_delayed_routes/")
     logger.info("✅ Written: top_delayed_routes")
 
-    # ── 4. Daily Delay Trend per Route ─────────────────────────────────────────
     df_daily = df.groupBy("route_id", "date_str") \
         .agg(
             F.avg("delay_seconds").alias("daily_avg_delay"),
@@ -150,7 +144,6 @@ def run_batch_job(input_path: str, output_path: str, num_partitions: int = 8):
         .parquet(f"{output_path}/daily_trend/")
     logger.info("✅ Written: daily_trend")
 
-    # ── 5. Stop-Level Delay Averages ───────────────────────────────────────────
     df_stop = df.groupBy("route_id", "stop_id") \
         .agg(
             F.avg("delay_seconds").alias("avg_stop_delay"),
@@ -162,7 +155,6 @@ def run_batch_job(input_path: str, output_path: str, num_partitions: int = 8):
         .parquet(f"{output_path}/stop_delay/")
     logger.info("✅ Written: stop_delay")
 
-    # ── 6. Parallel Benchmark ──────────────────────────────────────────────────
     # Re-run route agg with 1 partition (sequential) vs 8 (parallel) for benchmarking
     logger.info("Running sequential benchmark (1 partition)...")
     t0 = datetime.utcnow()
@@ -184,7 +176,6 @@ def run_batch_job(input_path: str, output_path: str, num_partitions: int = 8):
         "total_records": total_records
     }
 
-    # Write benchmark results
     spark.createDataFrame([benchmark]).write \
         .mode("overwrite") \
         .json(f"{output_path}/benchmark/")

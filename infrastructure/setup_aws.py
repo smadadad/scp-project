@@ -31,8 +31,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 
-# ─── S3 ────────────────────────────────────────────────────────────────────────
-
 def create_s3_bucket():
     s3 = get_s3_client()
     try:
@@ -55,8 +53,6 @@ def create_s3_bucket():
         logger.error(f"S3 setup failed: {e}")
         raise
 
-
-# ─── Kinesis ───────────────────────────────────────────────────────────────────
 
 def create_kinesis_stream():
     kinesis = get_kinesis_client()
@@ -81,8 +77,6 @@ def enable_kinesis_enhanced_monitoring():
     )
     logger.info("✅ Kinesis enhanced monitoring enabled")
 
-
-# ─── DynamoDB ──────────────────────────────────────────────────────────────────
 
 def create_dynamodb_tables():
     dynamo = get_dynamodb_resource()
@@ -135,8 +129,6 @@ def create_dynamodb_tables():
             logger.info(f"DynamoDB table already exists: {table_def['TableName']}")
 
 
-# ─── Athena ────────────────────────────────────────────────────────────────────
-
 def setup_athena():
     athena = get_athena_client()
     query = f"CREATE DATABASE IF NOT EXISTS {ATHENA_DATABASE}"
@@ -169,8 +161,6 @@ def setup_athena():
     )
     logger.info("✅ Athena external table created: batch_delay_history")
 
-
-# ─── EMR ───────────────────────────────────────────────────────────────────────
 
 def create_emr_cluster():
     emr = get_emr_client()
@@ -286,8 +276,6 @@ def create_emr_cluster():
 
     return cluster_id
 
-
-# ─── Main ──────────────────────────────────────────────────────────────────────
 
 def setup_all():
     logger.info("🚀 Starting Dublin Bus Analytics infrastructure setup...")

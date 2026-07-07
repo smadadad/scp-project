@@ -47,8 +47,6 @@ kinesis = get_kinesis_client()
 s3 = get_s3_client()
 
 
-# ─── Helpers ───────────────────────────────────────────────────────────────────
-
 def generate_dummy_record(route_id: str = "46A") -> dict:
     return {
         "event_id": f"bench_{time.time_ns()}",
@@ -71,8 +69,6 @@ def save_csv(filename: str, headers: list, rows: list):
     logger.info(f"CSV saved: {path}")
     return path
 
-
-# ─── Test 1: Kinesis Ingestion Throughput ──────────────────────────────────────
 
 def benchmark_kinesis_throughput(rates: list[int] = [10, 50, 100, 200, 500]) -> list[dict]:
     """
@@ -129,8 +125,6 @@ def benchmark_kinesis_throughput(rates: list[int] = [10, 50, 100, 200, 500]) -> 
 
     return results
 
-
-# ─── Test 2: Speed Layer Latency ───────────────────────────────────────────────
 
 def benchmark_speed_latency(api_url: str, n_requests: int = 50) -> dict:
     """
@@ -200,8 +194,6 @@ def benchmark_speed_latency(api_url: str, n_requests: int = 50) -> dict:
     return result
 
 
-# ─── Test 3: Batch Speedup ─────────────────────────────────────────────────────
-
 def fetch_batch_benchmark_from_s3() -> list[dict]:
     """
     Fetch benchmark results written by the Spark batch job from S3.
@@ -242,8 +234,6 @@ def fetch_batch_benchmark_from_s3() -> list[dict]:
 
     return results
 
-
-# ─── Plots ─────────────────────────────────────────────────────────────────────
 
 def plot_throughput(results: list[dict]):
     rates = [r["target_rate_rps"] for r in results if "error" not in r]
@@ -322,8 +312,6 @@ def plot_latency(latency_csv: str):
     logger.info(f"Chart saved: {path}")
     plt.close()
 
-
-# ─── Main ──────────────────────────────────────────────────────────────────────
 
 def run_all_benchmarks(api_url: str):
     logger.info("🚀 Running all benchmarks...")

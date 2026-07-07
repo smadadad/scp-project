@@ -11,7 +11,7 @@ Windows:
   • 1-minute tumbling window — per-route average delay
   • Anomaly flag — route delay > 2x its historical batch average
 
-This runs as a long-lived process (or can be wrapped as a Lambda trigger).
+This runs as a long-lived process.
 
 Usage:
     python speed_layer/stream_processor.py
@@ -42,8 +42,6 @@ dynamo = get_dynamodb_resource()
 speed_table = dynamo.Table(DYNAMO_SPEED_TABLE)
 batch_table = dynamo.Table(DYNAMO_BATCH_TABLE)
 
-
-# ─── In-Memory Sliding Window ──────────────────────────────────────────────────
 
 class SlidingWindowAggregator:
     """
@@ -101,8 +99,6 @@ class SlidingWindowAggregator:
 aggregator = SlidingWindowAggregator(window_minutes=WINDOW_SIZE_MINUTES)
 
 
-# ─── Batch Baseline Lookup ─────────────────────────────────────────────────────
-
 _batch_baseline_cache: dict[str, float] = {}
 _cache_ts: datetime.datetime = None
 CACHE_TTL_MINUTES = 10
@@ -136,8 +132,6 @@ def get_batch_baseline(route_id: str) -> float | None:
 
     return None
 
-
-# ─── DynamoDB Write ────────────────────────────────────────────────────────────
 
 def write_speed_view(window_stats: dict[str, dict], window_end: str):
     """Write current window aggregates to DynamoDB speed view table."""
@@ -191,8 +185,6 @@ def write_top_routes(top_routes: list[tuple[str, dict]], window_end: str):
                 + ", ".join(f"{r}={s['avg_delay']:.0f}s" for r, s in top_routes))
 
 
-# ─── Kinesis Reader ────────────────────────────────────────────────────────────
-
 def process_kinesis_record(record: dict):
     """Process a single Kinesis record — add to sliding window."""
     route_id = record.get("route_id")
@@ -227,8 +219,6 @@ def get_shard_iterators_trim_horizon() -> list[str]:
         iterators.append(resp["ShardIterator"])
     return iterators
 
-
-# ─── Main Loop ─────────────────────────────────────────────────────────────────
 
 def run_speed_layer():
     logger.info(f"🚀 Speed layer started — {WINDOW_SIZE_MINUTES}min sliding window")

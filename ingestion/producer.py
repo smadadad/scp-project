@@ -35,8 +35,6 @@ logger = logging.getLogger(__name__)
 kinesis = get_kinesis_client()
 
 
-# ─── Fetch & Parse ─────────────────────────────────────────────────────────────
-
 def fetch_trip_updates() -> list[dict]:
     """Fetch TFI TripUpdates protobuf and parse into list of delay records."""
     headers = {
@@ -133,8 +131,6 @@ def fetch_vehicle_positions() -> list[dict]:
     return records
 
 
-# ─── Kinesis Put ───────────────────────────────────────────────────────────────
-
 def put_records_to_kinesis(records: list[dict]):
     """Batch-put records into Kinesis (max 500 per call)."""
     if not records:
@@ -172,8 +168,6 @@ def put_records_to_kinesis(records: list[dict]):
 
     logger.info(f"Kinesis: {total_sent} records written, {total_failed} failed")
 
-
-# ─── Main Loop ─────────────────────────────────────────────────────────────────
 
 def run_producer(max_iterations: int = None):
     """
