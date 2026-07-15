@@ -1,6 +1,8 @@
 """
-AWS utility helpers — creates boto3 clients using config credentials.
-In AWS Academy, credentials rotate every session; update config.py accordingly.
+AWS utility helpers.
+
+AWS credentials are automatically provided by AWS Cloud9 IAM role.
+No access keys or secret keys are required.
 """
 
 import boto3
@@ -9,29 +11,44 @@ import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from config.config import (
-    AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
+
+from config.config import AWS_REGION
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def get_boto3_session():
-    """Return a boto3 Session using credentials from config."""
+    """
+    Create a boto3 session using AWS Cloud9 credentials.
+
+    Cloud9 automatically provides temporary credentials
+    through the IAM role attached to the environment.
+    """
+
     return boto3.Session(
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        aws_session_token=AWS_SESSION_TOKEN,
-        region_name=AWS_REGION,
+        region_name=AWS_REGION
     )
 
 
 def get_client(service: str):
+    """
+    Create an AWS service client.
+    Example: s3, kinesis, emr, athena
+    """
     return get_boto3_session().client(service)
 
 
 def get_resource(service: str):
+    """
+    Create an AWS resource.
+    Example: DynamoDB resource.
+    """
     return get_boto3_session().resource(service)
 
 

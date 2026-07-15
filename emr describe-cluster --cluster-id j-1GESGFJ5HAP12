@@ -1,0 +1,19 @@
+{
+    "Clusters": [
+        {
+            "Id": "j-1GESGFJ5HAP12",
+            "Name": "dublin-bus-batch-cluster",
+            "Status": {
+                "State": "STARTING",
+                "StateChangeReason": {
+                    "Message": "Configuring cluster software"
+                },
+                "Timeline": {
+                    "CreationDateTime": "2026-07-13T17:42:01.711000+00:00"
+                }
+            },
+            "NormalizedInstanceHours": 0,
+            "ClusterArn": "arn:aws:elasticmapreduce:us-east-1:987533982767:cluster/j-1GESGFJ5HAP12"
+        }
+    ]
+}
