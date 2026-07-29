@@ -54,7 +54,7 @@ KINESIS_PARTITION_KEY = "route_id"
 # ==========================
 
 # Must be globally unique in AWS
-S3_BUCKET_NAME = "dublin-bus-analytics-shritiz-nci-20260708"
+S3_BUCKET_NAME = "dublin-bus-analytics-shritiz-nci-20260708vkjkdfnvcx"
 
 S3_RAW_PREFIX = "raw/"
 
@@ -79,7 +79,7 @@ EMR_WORKER_INSTANCE_TYPE = "m5.xlarge"
 
 EMR_MIN_WORKERS = 1
 
-EMR_MAX_WORKERS = 2
+EMR_MAX_WORKERS = 4
 
 
 # ==========================
