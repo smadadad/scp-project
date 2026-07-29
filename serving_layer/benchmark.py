@@ -1143,7 +1143,157 @@ def wait_for_step(step_id):
 
 
 
-    return state, time.perf_counter() - start
+    elapsed = time.perf_counter() - start
+
+
+    return state, elapsed
+
+
+
+
+
+def plot_speedup(results):
+
+
+    if not results:
+
+
+        print(
+
+            "No speedup results. Chart not created."
+
+        )
+
+
+        return
+
+
+
+    ensure_results_dir()
+
+
+
+    partitions = [
+
+        r["partitions"]
+
+        for r in results
+
+    ]
+
+
+
+    speedup = [
+
+        r["speedup"]
+
+        for r in results
+
+    ]
+
+
+
+    plt.figure(
+
+        figsize=(8,5)
+
+    )
+
+
+
+    plt.plot(
+
+        partitions,
+
+        speedup,
+
+        marker="o",
+
+        color="darkorange",
+
+        label="Measured speedup"
+
+    )
+
+
+
+    plt.plot(
+
+        partitions,
+
+        partitions,
+
+        linestyle="--",
+
+        color="gray",
+
+        label="Ideal linear speedup"
+
+    )
+
+
+
+    plt.xlabel(
+
+        "Number of Spark Partitions (Workers)"
+
+    )
+
+
+
+    plt.ylabel(
+
+        "Speedup (relative to 1 partition)"
+
+    )
+
+
+
+    plt.title(
+
+        "EMR Spark Batch Layer — Parallel Speedup"
+
+    )
+
+
+
+    plt.legend()
+
+
+
+    plt.grid(
+
+        True,
+
+        alpha=0.3
+
+    )
+
+
+
+    plt.tight_layout()
+
+
+
+    plt.savefig(
+
+        f"{RESULTS_DIR}/speedup_chart.png",
+
+        dpi=150
+
+    )
+
+
+
+    plt.close()
+
+
+
+    print(
+
+        f"Saved {RESULTS_DIR}/speedup_chart.png"
+
+    )
 
 
 
@@ -1196,7 +1346,7 @@ def run_speedup_benchmark():
 
 
 
-        if baseline is None:
+        if baseline is None and state == "COMPLETED":
 
 
             baseline = elapsed
@@ -1204,21 +1354,31 @@ def run_speedup_benchmark():
 
 
 
-        speedup = (
+        if state == "COMPLETED" and baseline:
 
-            baseline / elapsed
 
-            if elapsed > 0
+            speedup = (
 
-            else 0
+                baseline / elapsed
 
-        )
+            )
+
+
+        else:
+
+
+            speedup = 0
+
 
 
 
         efficiency = (
 
             speedup / p
+
+            if p > 0
+
+            else 0
 
         )
 
@@ -1297,13 +1457,15 @@ def run_speedup_benchmark():
     )
 
 
+    plot_speedup(
+
+        results
+
+    )
+
+
 
     return results
-
-
-
-
-
 # ======================================================
 # MAIN
 # ======================================================

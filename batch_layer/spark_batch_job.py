@@ -17,14 +17,63 @@ spark_batch_job.py \
 --input s3://bucket/raw/ \
 --output s3://bucket/batch-output/ \
 --partitions 8
+
+
+Benchmark Fix:
+-----------------------------------------------------
+
+The partition benchmark previously showed almost identical
+execution times for every partition count.
+
+Reason:
+
+.repartition(partitions)
+
+only controls the input dataframe partitions.
+
+However, Spark groupBy operations create shuffle stages,
+and shuffle parallelism is controlled separately by:
+
+spark.sql.shuffle.partitions
+
+The default value is 200.
+
+Therefore:
+
+--partitions 1
+--partitions 5
+--partitions 10
+--partitions 20
+
+were all running aggregation with:
+
+spark.sql.shuffle.partitions = 200
+
+
+Fix applied:
+
+1. spark.sql.shuffle.partitions is now linked to
+   --partitions argument.
+
+2. Adaptive Query Execution is disabled because AQE
+   can automatically merge partitions and hide benchmark
+   differences.
+
+3. Benchmark timing is handled externally by benchmark.py
+   using EMR step completion time.
+
+-----------------------------------------------------
 """
+
 
 import argparse
 import logging
 from datetime import datetime
 
+
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+
 from pyspark.sql.types import (
     StructType,
     StructField,
@@ -33,11 +82,15 @@ from pyspark.sql.types import (
 )
 
 
+
 logging.basicConfig(
     level=logging.INFO
 )
 
+
 logger = logging.getLogger(__name__)
+
+
 
 
 # -----------------------------------------------------
@@ -46,11 +99,13 @@ logger = logging.getLogger(__name__)
 
 RAW_SCHEMA = StructType([
 
+
     StructField(
         "event_id",
         StringType(),
         True
     ),
+
 
     StructField(
         "ingestion_time",
@@ -58,11 +113,13 @@ RAW_SCHEMA = StructType([
         True
     ),
 
+
     StructField(
         "route_id",
         StringType(),
         True
     ),
+
 
     StructField(
         "trip_id",
@@ -70,11 +127,13 @@ RAW_SCHEMA = StructType([
         True
     ),
 
+
     StructField(
         "stop_sequence",
         IntegerType(),
         True
     ),
+
 
     StructField(
         "stop_id",
@@ -82,23 +141,28 @@ RAW_SCHEMA = StructType([
         True
     ),
 
+
     StructField(
         "delay_seconds",
         IntegerType(),
         True
     ),
 
+
     StructField(
         "source",
         StringType(),
         True
     )
+
 ])
 
 
 
+
+
 # -----------------------------------------------------
-# Main batch job
+# Main Batch Job
 # -----------------------------------------------------
 
 def run_batch_job(
@@ -107,17 +171,34 @@ def run_batch_job(
         partitions
 ):
 
+
     spark = (
+
         SparkSession.builder
+
         .appName(
             "DublinBus-BatchLayer"
         )
+
+
+        # Disable AQE for benchmark accuracy
         .config(
             "spark.sql.adaptive.enabled",
-            "true"
+            "false"
         )
+
+
+        # Controls shuffle parallelism
+        .config(
+            "spark.sql.shuffle.partitions",
+            partitions
+        )
+
+
         .getOrCreate()
+
     )
+
 
 
     spark.sparkContext.setLogLevel(
@@ -125,37 +206,53 @@ def run_batch_job(
     )
 
 
+
     logger.info(
         f"Spark version: {spark.version}"
     )
 
+
     logger.info(
         f"Input: {input_path}"
     )
+
 
     logger.info(
         f"Partitions: {partitions}"
     )
 
 
+
+
+
     # -------------------------------------------------
-    # Read data
+    # Read Raw Data
     # -------------------------------------------------
 
     df = (
 
         spark.read
-        .schema(RAW_SCHEMA)
-        .json(input_path)
+
+        .schema(
+            RAW_SCHEMA
+        )
+
+        .json(
+            input_path
+        )
+
 
         .filter(
             F.col("route_id").isNotNull()
         )
 
+
         .filter(
             F.col("delay_seconds").isNotNull()
         )
 
+
+        # Controls input partitioning
         .repartition(
             partitions,
             "route_id"
@@ -164,7 +261,9 @@ def run_batch_job(
     )
 
 
+
     total_records = df.count()
+
 
 
     logger.info(
@@ -172,11 +271,14 @@ def run_batch_job(
     )
 
 
+
     if total_records == 0:
+
 
         logger.error(
             "No input data found"
         )
+
 
         spark.stop()
 
@@ -184,13 +286,16 @@ def run_batch_job(
 
 
 
+
+
     # -------------------------------------------------
-    # Time columns
+    # Create Time Columns
     # -------------------------------------------------
 
     df = (
 
         df
+
 
         .withColumn(
             "event_ts",
@@ -199,6 +304,7 @@ def run_batch_job(
             )
         )
 
+
         .withColumn(
             "day_of_week",
             F.date_format(
@@ -206,6 +312,7 @@ def run_batch_job(
                 "EEEE"
             )
         )
+
 
         .withColumn(
             "hour_of_day",
@@ -217,59 +324,87 @@ def run_batch_job(
     )
 
 
+
+
+
     # -------------------------------------------------
-    # Route statistics
+    # Route Statistics
     # -------------------------------------------------
 
     route_stats = (
 
         df.groupBy(
+
             "route_id",
+
             "day_of_week",
+
             "hour_of_day"
+
         )
 
+
         .agg(
+
 
             F.avg(
                 "delay_seconds"
             )
+
             .alias(
                 "avg_delay"
             ),
 
 
+
             F.max(
                 "delay_seconds"
             )
+
             .alias(
                 "max_delay"
             ),
 
 
+
             F.count("*")
+
             .alias(
                 "observations"
             )
 
         )
 
+
         .withColumn(
+
             "generated_at",
+
             F.lit(
                 datetime.utcnow()
                 .isoformat()
             )
+
         )
 
     )
 
 
+
+
+
     route_stats.write \
-        .mode("overwrite") \
+
+        .mode(
+            "overwrite"
+        ) \
+
         .parquet(
+
             f"{output_path}/route_statistics/"
+
         )
+
 
 
     logger.info(
@@ -278,8 +413,11 @@ def run_batch_job(
 
 
 
+
+
+
     # -------------------------------------------------
-    # Top delayed routes
+    # Top Delayed Routes
     # -------------------------------------------------
 
     top_routes = (
@@ -288,128 +426,99 @@ def run_batch_job(
             "route_id"
         )
 
+
         .agg(
+
 
             F.avg(
                 "delay_seconds"
             )
+
             .alias(
                 "average_delay"
             ),
 
+
+
             F.count("*")
+
             .alias(
                 "records"
             )
 
         )
 
+
         .orderBy(
+
             F.desc(
                 "average_delay"
             )
+
         )
 
-        .limit(20)
+
+        .limit(
+            20
+        )
 
     )
+
+
+
 
 
     top_routes.write \
-        .mode("overwrite") \
+
+        .mode(
+            "overwrite"
+        ) \
+
         .parquet(
+
             f"{output_path}/top_delayed_routes/"
+
         )
 
 
+
     logger.info(
-        "Top routes written"
+        "Top delayed routes written"
     )
+
+
 
 
 
     # -------------------------------------------------
-    # Spark partition benchmark
+    # Finish
     # -------------------------------------------------
-
-    logger.info(
-        f"Running aggregation benchmark with {partitions} partitions"
-    )
-
-
-    start = datetime.utcnow()
-
-
-    (
-        df.repartition(
-            partitions
-        )
-
-        .groupBy(
-            "route_id"
-        )
-
-        .agg(
-            F.avg(
-                "delay_seconds"
-            )
-        )
-
-        .count()
-
-    )
-
-
-    end = datetime.utcnow()
-
-
-    execution_time = (
-        end - start
-    ).total_seconds()
-
-
-
-    benchmark = {
-
-        "partitions":
-            partitions,
-
-        "execution_seconds":
-            execution_time,
-
-        "records":
-            total_records
-
-    }
-
-
-
-    spark.createDataFrame(
-        [benchmark]
-    ).write \
-    .mode("overwrite") \
-    .json(
-        f"{output_path}/benchmark/"
-    )
-
-
-    logger.info(
-        f"Benchmark finished: {benchmark}"
-    )
 
 
     spark.stop()
 
 
 
+    logger.info(
+        "Batch job complete"
+    )
+
+
+
+
+
+
+
 # -----------------------------------------------------
-# Entry point
+# Entry Point
 # -----------------------------------------------------
 
 if __name__ == "__main__":
 
 
+
     parser = argparse.ArgumentParser()
+
 
 
     parser.add_argument(
@@ -418,10 +527,12 @@ if __name__ == "__main__":
     )
 
 
+
     parser.add_argument(
         "--output",
         required=True
     )
+
 
 
     parser.add_argument(
@@ -431,7 +542,9 @@ if __name__ == "__main__":
     )
 
 
+
     args = parser.parse_args()
+
 
 
 

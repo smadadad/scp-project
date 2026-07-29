@@ -13,7 +13,7 @@ through boto3/IAM credentials.
 # Transport for Ireland API
 # ==========================
 
-TFI_API_KEY = "YOUR_TFI_API_KEY"
+TFI_API_KEY = "61d3064e1b2e478eac2ef4d2ca14ce26"
 
 TFI_TRIP_UPDATES_URL = (
     "https://api.nationaltransport.ie/gtfsr/v2/TripUpdates"
