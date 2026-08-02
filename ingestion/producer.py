@@ -42,7 +42,7 @@ def fetch_trip_updates() -> list[dict]:
         "Cache-Control": "no-cache"
     }
     try:
-        response = requests.get(TFI_TRIP_UPDATES_URL, headers=headers, timeout=15)
+        response = requests.get(TFI_TRIP_UPDATES_URL, headers=headers, timeout=15, verify=False)
         response.raise_for_status()
     except requests.RequestException as e:
         logger.error(f"Failed to fetch TripUpdates: {e}")
@@ -97,7 +97,7 @@ def fetch_vehicle_positions() -> list[dict]:
     """Fetch live vehicle positions and merge into records."""
     headers = {"x-api-key": TFI_API_KEY}
     try:
-        response = requests.get(TFI_VEHICLE_POSITIONS_URL, headers=headers, timeout=15)
+        response = requests.get(TFI_VEHICLE_POSITIONS_URL, headers=headers, timeout=15, verify=False)
         response.raise_for_status()
     except requests.RequestException as e:
         logger.warning(f"Vehicle positions unavailable: {e}")

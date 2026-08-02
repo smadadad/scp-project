@@ -402,6 +402,8 @@ def run_throughput_benchmark():
         results
 
     )
+    
+    plot_throughput(results)
 
 
 
@@ -1150,7 +1152,33 @@ def wait_for_step(step_id):
 
 
 
+def plot_throughput(results):
 
+    if not results:
+        print("No throughput results. Chart not created.")
+        return
+
+    ensure_results_dir()
+
+    rates = [r["target_rate"] for r in results]
+    actual = [r["actual_rps"] for r in results]
+
+    plt.figure(figsize=(8,5))
+
+    plt.plot(rates, actual, marker="o", color="crimson", label="Actual throughput")
+    plt.plot(rates, rates, linestyle="--", color="gray", label="Ideal (1:1)")
+
+    plt.xlabel("Target Ingestion Rate (records/sec)")
+    plt.ylabel("Actual Throughput (records/sec)")
+    plt.title("Kinesis Ingestion Throughput vs Target Rate\nDublin Bus Analytics Pipeline")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+
+    plt.savefig(f"{RESULTS_DIR}/throughput_chart.png", dpi=150)
+    plt.close()
+
+    print(f"Saved {RESULTS_DIR}/throughput_chart.png")
 
 def plot_speedup(results):
 

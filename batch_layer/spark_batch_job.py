@@ -191,7 +191,7 @@ def run_batch_job(
         # Controls shuffle parallelism
         .config(
             "spark.sql.shuffle.partitions",
-            partitions
+            str(partitions)
         )
 
 
@@ -391,25 +391,13 @@ def run_batch_job(
 
 
 
-
-
     route_stats.write \
-
-        .mode(
-            "overwrite"
-        ) \
-
+        .mode("overwrite") \
         .parquet(
-
-            f"{output_path}/route_statistics/"
-
+            f"{output_path.rstrip('/')}/route_statistics/"
         )
 
-
-
-    logger.info(
-        "Route statistics written"
-    )
+    logger.info("Route statistics written")
 
 
 
@@ -469,22 +457,15 @@ def run_batch_job(
 
 
     top_routes.write \
-
-        .mode(
-            "overwrite"
-        ) \
-
+        .mode("overwrite") \
         .parquet(
-
-            f"{output_path}/top_delayed_routes/"
-
+            f"{output_path.rstrip('/')}/top_delayed_routes/"
         )
 
+    logger.info("Top delayed routes written")
 
 
-    logger.info(
-        "Top delayed routes written"
-    )
+
 
 
 

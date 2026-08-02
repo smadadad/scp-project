@@ -88,6 +88,10 @@ dublin-bus-analytics/
 
 ### 1. Prerequisites
 
+
+Set-Location C:\Users\anima\Documents\GitHub\dublin-bus-analytics
+.\venv\Scripts\Activate.ps1
+
 ```bash
 pip install -r requirements.txt
 ```

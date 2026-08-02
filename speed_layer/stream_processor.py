@@ -16,7 +16,7 @@ This runs as a long-lived process.
 Usage:
     python speed_layer/stream_processor.py
 """
-
+from __future__ import annotations
 import json
 import time
 import logging
@@ -26,6 +26,7 @@ import os
 import threading
 from collections import defaultdict, deque
 from decimal import Decimal
+import botocore.exceptions
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from config.config import (
@@ -105,30 +106,68 @@ CACHE_TTL_MINUTES = 10
 
 
 def get_batch_baseline(route_id: str) -> float | None:
-    """
-    Look up the historical average delay for a route from DynamoDB (batch view).
-    Results cached locally for CACHE_TTL_MINUTES to avoid excess reads.
-    """
+
     global _cache_ts
+    global dynamo, batch_table, speed_table
 
     now = datetime.datetime.utcnow()
+
+    # Return cached value if still valid
     if _cache_ts and (now - _cache_ts).seconds < CACHE_TTL_MINUTES * 60:
         return _batch_baseline_cache.get(route_id)
 
-    try:
-        # Query batch table for current day-of-week + hour
-        time_bucket = f"{now.strftime('%A')}_{now.hour:02d}"
-        response = batch_table.get_item(
-            Key={"route_id": route_id, "time_bucket": time_bucket}
-        )
-        item = response.get("Item")
-        if item:
-            baseline = float(item.get("avg_delay_seconds", 0))
-            _batch_baseline_cache[route_id] = baseline
-            _cache_ts = now
-            return baseline
-    except Exception as e:
-        logger.warning(f"Batch baseline lookup failed for {route_id}: {e}")
+    time_bucket = f"{now.strftime('%A')}_{now.hour:02d}"
+
+    for attempt in range(2):
+
+        try:
+            response = batch_table.get_item(
+                Key={
+                    "route_id": route_id,
+                    "time_bucket": time_bucket
+                }
+            )
+
+            item = response.get("Item")
+
+            if item:
+                baseline = float(item.get("avg_delay_seconds", 0))
+                _batch_baseline_cache[route_id] = baseline
+                _cache_ts = now
+                return baseline
+
+            return None
+
+        except botocore.exceptions.ClientError as e:
+
+            error_code = e.response.get("Error", {}).get("Code")
+
+            if (
+                error_code == "UnrecognizedClientException"
+                and attempt == 0
+            ):
+                logger.warning(
+                    "Detected stale AWS credentials. "
+                    "Refreshing DynamoDB session and retrying..."
+                )
+
+                dynamo = get_dynamodb_resource()
+                speed_table = dynamo.Table(DYNAMO_SPEED_TABLE)
+                batch_table = dynamo.Table(DYNAMO_BATCH_TABLE)
+
+                continue
+
+            logger.warning(
+                f"Batch baseline lookup failed for {route_id}: {e}"
+            )
+            return None
+
+        except Exception as e:
+            logger.warning(
+                f"Batch baseline lookup failed for {route_id}: {e}"
+            )
+            return None
+
 
     return None
 

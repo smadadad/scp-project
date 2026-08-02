@@ -13,7 +13,7 @@ through boto3/IAM credentials.
 # Transport for Ireland API
 # ==========================
 
-TFI_API_KEY = "61d3064e1b2e478eac2ef4d2ca14ce26"
+TFI_API_KEY = "3366eb5c3e8244f89f65a29278a8ddb9"
 
 TFI_TRIP_UPDATES_URL = (
     "https://api.nationaltransport.ie/gtfsr/v2/TripUpdates"
@@ -27,7 +27,7 @@ TFI_STATIC_GTFS_URL = (
     "https://www.transportforireland.ie/transitData/Data/GTFS_Realtime.zip"
 )
 
-POLL_INTERVAL_SECONDS = 30
+POLL_INTERVAL_SECONDS = 60
 
 
 # ==========================
@@ -54,7 +54,7 @@ KINESIS_PARTITION_KEY = "route_id"
 # ==========================
 
 # Must be globally unique in AWS
-S3_BUCKET_NAME = "dublin-bus-analytics-shritiz-nci-20260708vkjkdfnvcx"
+S3_BUCKET_NAME = "dublin-bus-analytics-bucket-x24101001"
 
 S3_RAW_PREFIX = "raw/"
 
@@ -138,6 +138,7 @@ KINESIS_BACKLOG_SCALE_TRIGGER = 1000
 DASHBOARD_REFRESH_SECONDS = 30
 
 
-EMR_CLUSTER_ID =  "j-2WE8OJJGR6KPC"
+EMR_CLUSTER_ID =  "j-3K4RE7LKI7RTW"
 
 EMR_BATCH_JOB_SCRIPT_S3_PATH = "scripts/spark_batch_job.py"
+
